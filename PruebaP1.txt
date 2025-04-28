@@ -1,0 +1,44 @@
+---------------------------------Parte 1: Respuestas------------------------------------
+1)Una relación muchos a muchos ocurre cuando varias filas de una tabla están relacionadas con varias filas de otra tabla. Este se implementa creando una tabla que sea intermediaria que contiene claves de ambas tablas
+el ejemplo en el esquema seria: 
+----> Tabla Proyectos (proyecto_id) y Tabla Empleados (empleado_id)
+-----> Relación muchos a muchos: Un empleado puede trabajar en varios proyectos y un proyecto puede tener varios empleados.
+------> Tabla intermedia: Proyecto_Empleado (proyecto_id, empleado_id).
+
+
+2)Una vista es una consulta guardada que se comporta como una tabla virtual.
+Se podría usar para calcular el total de horas por proyecto, mostrando también el nombre del proyecto.
+Consulta para crear la vista:
+CREATE OR REPLACE VIEW vista_total_horas_proyecto AS
+SELECT p.nombre_proyecto, SUM(pe.horas_asignadas) AS total_horas
+FROM proyectos p
+JOIN proyecto_empleado pe ON p.proyecto_id = pe.proyecto_id
+GROUP BY p.nombre_proyecto;
+
+
+3)una excepción predefinida en PL/SQL es un error que lo reconoce automáticamente y le asigna un nombre 
+un Ejemplo seria:
+ EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al insertar datos en Asignaciones: ' || SQLERRM);
+        RAISE;
+END;
+/
+
+4)Un cursor explícito es una consulta SELECT que definimos y controlamos manualmente en PL/SQL, Se usa para procesar varias filas de una consulta.
+-- Dos atributos de cursor:
+---> %NOTFOUND: Devuelve TRUE si la última operación FETCH no recuperó ninguna fila.
+---> %ROWCOUNT: Devuelve el número de filas recuperadas hasta el momento.
+
+
+
+
+
+
+
+
+
+
+
+
+---------------------------------FINAL PARTE 1: RESPUESTAS------------------------------------
