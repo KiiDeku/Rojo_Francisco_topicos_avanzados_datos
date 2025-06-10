@@ -1,0 +1,178 @@
+-- Nombre: Francisco Rojo Alfaro
+-- Prueba 2: Tópicos Avanzados de Datos
+
+--------------------------------------------------------------------------------
+-- PARTE 1: TEORÍA
+--------------------------------------------------------------------------------
+
+1. Explica la diferencia entre un procedimiento almacenado y una
+función almacenada en PL/SQL. Da un ejemplo de cuándo usarías
+cada uno en el contexto de la base de datos de la prueba.
+
+--Ejercicio 1: La diferencia principal radica en como esta hecho su propósito y como este responde para devolver los valores
+
+  -Propósito: Un procedimiento se utiliza para ejecutar una serie de acciones o modificar la base de datos (como `INSERT` en `Movimientos` o `UPDATE` en `Inventario`). Una función se usa principalmente para realizar un cálculo y devolver un único resultado.
+
+  -Valor de Retorno: Una función siempre debe devolver un valor utilizando la cláusula `RETURN`. Un procedimiento no puede usar `RETURN` para devolver un valor, pero puede pasar datos de vuelta al programa que lo llama a través de parámetros `OUT` o `IN OUT`.
+
+  -Uso en SQL: Las funciones se pueden llamar directamente desde sentencias SQL (`SELECT`, `WHERE`), mientras que los procedimientos no; deben ser ejecutados como un bloque de código PL/SQL.
+
+  b) Da un ejemplo de cuándo usarías cada uno en el contexto de la base de datos de la prueba.
+
+  - Procedimiento: Usaría un procedimiento como `registrar_movimiento` para registrar una nueva entrada o salida de un producto. Este procedimiento realizaría varias acciones: insertar una fila en la tabla `Movimientos` y actualizar la cantidad en la tabla `Inventario`. No necesita devolver un valor, solo ejecutar las acciones.
+  - Función: Usaría una función como `calcular_valor_inventario_total` para calcular el valor monetario total del stock de un producto (`Precio * Cantidad`). Esta función realizaría un cálculo y devolvería un único número, que podría ser usado en un reporte.
+
+
+
+
+2. Describe cómo usarías un parámetro IN OUT en un procedimiento
+almacenado. Escribe un ejemplo de un procedimiento que use un
+parámetro IN OUT para actualizar y devolver la cantidad en
+inventario después de un movimiento.
+
+--Describe cómo usarías un parámetro IN OUT en un procedimiento almacenado.
+
+--Ejercicio 2:
+
+	Primero: El programa que llama al procedimiento inicializa una variable con un valor, 
+	Segundo: Pasa esa variable como parámetro "IN OUT" al procedimiento, 
+	Tercero: Dentro del procedimiento, se puede leer el valor inicial de la variable y también asignarle un nuevo valor, 
+	Cuarto: Cuando el procedimiento termina, la variable original en el programa que lo llamó contendrá el nuevo valor asignado dentro del procedimiento.
+
+  Es útil para situaciones donde necesitas modificar una variable de entrada y que el cambio persista después de la ejecución.
+
+-- b) Escribe un ejemplo de un procedimiento que use un parámetro IN OUT.
+
+CREATE OR REPLACE PROCEDURE actualizar_cantidad_inventario(
+    p_producto_id IN NUMBER,
+    p_cantidad_movimiento IN NUMBER,
+    p_cantidad_final IN OUT NUMBER
+) AS
+BEGIN
+    -- Se lee el valor inicial de p_cantidad_final y se actualiza sumando el movimiento.
+    p_cantidad_final := p_cantidad_final + p_cantidad_movimiento;
+
+    -- Se actualiza la tabla de inventario con el nuevo valor calculado.
+    UPDATE Inventario
+    SET Cantidad = p_cantidad_final,
+        FechaActualizacion = SYSDATE
+    WHERE ProductoID = p_producto_id;
+
+    COMMIT;
+    DBMS_OUTPUT.PUT_LINE('Inventario del producto ' || p_producto_id || ' actualizado a ' || p_cantidad_final || ' unidades.');
+EXCEPTION
+    WHEN OTHERS THEN
+        DBMS_OUTPUT.PUT_LINE('Error al actualizar el inventario.');
+        ROLLBACK;
+END;
+/
+
+
+
+3. ¿Cómo se puede usar una función almacenada dentro de una
+consulta SQL? Escribe un ejemplo de una función que calcule el
+valor total del inventario de un producto (Precio * Cantidad)
+y úsala en una consulta para listar los productos con su valor
+total.
+
+a) ¿Cómo se puede usar una función almacenada dentro de una consulta SQL? 
+
+  Una función almacenada se puede usar directamente en una consulta `SELECT`, `WHERE` o `GROUP BY`. La función se invoca por su nombre y se le pasan los parámetros requeridos, que por lo general son columnas de la tabla que se está consultando. El valor que la función retorna se integra en el resultado de la consulta como si fuera una columna más.
+
+
+-- b) Escribe un ejemplo de una función y úsala en una consulta.
+
+Función que calcula el valor total del inventario para un producto.
+
+CREATE OR REPLACE FUNCTION calcular_valor_producto (
+    p_producto_id IN NUMBER
+) RETURN NUMBER AS
+    v_valor_total NUMBER;
+BEGIN
+    SELECT p.Precio * i.Cantidad
+    INTO v_valor_total
+    FROM Productos p
+    JOIN Inventario i ON p.ProductoID = i.ProductoID
+    WHERE p.ProductoID = p_producto_id;
+
+    RETURN NVL(v_valor_total, 0);
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN
+        RETURN 0;
+END;
+/
+
+-- Uso de la función en una consulta SQL.
+SELECT
+    ProductoID,
+    Nombre,
+    Precio,
+    calcular_valor_producto(ProductoID) AS Valor_Total_Inventario
+FROM
+    Productos;
+
+
+
+
+4. Explica qué es un trigger y menciona dos tipos de eventos que
+pueden dispararlo. Da un ejemplo de un trigger que se dispare
+después de insertar un movimiento en la tabla Movimientos y
+actualice la cantidad en Inventario.
+
+ a) Explica qué es un trigger y menciona dos tipos de eventos que pueden dispararlo.
+
+  Es un bloque de código PL/SQL que se almacena en la base de datos y se ejecuta automáticamente en respuesta a un evento específico que ocurre en una tabla.
+
+  Dos tipos de eventos que pueden dispararlo son:
+  1.  Eventos DML (Data Manipulation Language): `INSERT` (insertar una nueva fila), `UPDATE` (modificar una fila existente), `DELETE` (eliminar una fila).
+  2.  Eventos de Sistema o DDL (Data Definition Language): "CREATE" (crear un objeto), "ALTER" (modificar un objeto), "DRO" (eliminar un objeto).
+
+-- b) Da un ejemplo de un trigger que actualice el inventario después de insertar un movimiento.
+
+CREATE OR REPLACE TRIGGER actualizar_inventario_despues_movimiento
+    -- Define el momento en que se dispara el trigger:
+    -- 'AFTER INSERT' significa que se ejecutará DESPUÉS de que se inserte
+    -- una nueva fila en la tabla Movimientos.
+    AFTER INSERT ON Movimientos
+    
+    -- Define el nivel de granularidad del trigger:
+    -- 'FOR EACH ROW' significa que la lógica del trigger se ejecutará
+    -- una vez por cada fila que sea insertada.
+    FOR EACH ROW
+DECLARE
+    -- Declara una variable local para almacenar la cantidad que vamos
+    -- a sumar o restar del inventario.
+    v_cantidad_actualizar NUMBER;
+BEGIN
+    -- Evalúa el tipo de movimiento de la nueva fila que se está insertando.
+    -- Oracle nos da acceso a los datos de esta nueva fila a través de :NEW.
+    IF :NEW.TipoMovimiento = 'Entrada' THEN
+        -- Si es una entrada, la cantidad se debe sumar (es un valor positivo "+").
+        v_cantidad_actualizar := :NEW.Cantidad;
+        
+    ELSIF :NEW.TipoMovimiento = 'Salida' THEN
+        -- Si es una salida, la cantidad se debe restar (la convertimos a un valor negativo "-").
+        v_cantidad_actualizar := -:NEW.Cantidad;
+        
+    ELSE
+        -- Como medida de seguridad, si el tipo de movimiento no es ninguno
+        -- de los esperados, no se hace ningún cambio en la cantidad.
+        v_cantidad_actualizar := 0;
+    END IF;
+
+    -- Ejecuta la actualización en la tabla Inventario.
+    UPDATE Inventario
+    SET
+        -- Ajusta el stock. Usar "Cantidad + variable" funciona para ambos casos,
+        -- ya que sumar un número negativo es lo mismo que restar.
+        Cantidad = Cantidad + v_cantidad_actualizar,
+        
+        -- Actualiza la fecha de la última modificación al momento actual.
+        FechaActualizacion = SYSDATE
+        
+    -- WHERE para asegurar que se actualiza únicamente el inventario
+    -- del producto que corresponde al movimiento registrado.
+    WHERE ProductoID = :NEW.ProductoID;
+    
+END actualizar_inventario_despues_movimiento;
+/
