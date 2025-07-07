@@ -1,0 +1,81 @@
+--------------------------------
+--------PARTE 1:TEORIA----------
+--------------------------------
+
+
+1)Explica qué es una transacción en una base de datos y describe
+a través de un ejemplo cómo usarías savepoints para manejar
+errores parciales en un procedimiento que registra horas
+trabajadas en RegistrosTiempo.
+
+Son básicamente un conjunto de una o mas operaciones que trabajan en sql, permitiendo que:
+-Si todas las operaciones se completan correctamente estas se guardaran en un commit de manera permanente
+-por lo contrario, si almenos 1 falla, se deshace todas las operaciones volviendo a como estaba anteriormente a la transacción(ROLLBACK)
+
+
+BEGIN
+    SAVEPOINT inicio;
+    INSERT INTO RegistrosTiempo (AsignacionID, Fecha, HorasTrabajadas)
+    VALUES (1, TO_DATE('2025-05-01', 'YYYY-MM-DD'), 5);
+
+    SAVEPOINT medio;
+
+    BEGIN
+        INSERT INTO RegistrosTiempo (AsignacionID, Fecha, HorasTrabajadas)
+        VALUES (1, TO_DATE('2025-05-01', 'YYYY-MM-DD'), 10); -- excede 8
+    EXCEPTION
+        WHEN OTHERS THEN
+            ROLLBACK TO medio;
+            DBMS_OUTPUT.PUT_LINE('Error atrapado: rollback parcial.');
+    END;
+
+    COMMIT;
+END;
+/
+
+2)¿Qué es un Data Warehouse y cómo se diferencia de una base de
+datos transaccional? Describe cómo diseñarías una tabla de
+hechos para analizar las horas trabajadas por proyecto en la
+base de datos de la prueba.
+
+es un tipo de base de datos diseñada específicamente para el análisis de datos y la generación de informes de inteligencia de negocio. Su función principal es consolidar y almacenar grandes volúmenes de datos históricos de diversas fuentes para facilitar la toma de decisiones estratégicas.
+a diferencia de una base de datos tradicional que están optimizadas para procesamientos de transacciones en tiempo real.
+
+
+CREATE TABLE Fact_HorasTrabajadas (
+    FactID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    ProyectoID NUMBER,
+    Fecha DATE,
+    HorasTrabajadas NUMBER(5,2)
+);
+
+
+3. Explica cómo se implementa la herencia en Oracle usando tipos
+de objetos. Da un ejemplo de una jerarquía de tipos para
+modelar empleados (Empleado → Desarrollador) en la base de
+datos de la prueba.
+
+
+Es un mecanismo que permite a un tipo de objeto derivar atributos y métodos de otro tipo de objeto ya existente, creando una relación jerárquica
+
+
+4)Describe las ventajas y desventajas de usar índices y
+particiones en una base de datos. ¿Cómo usarías un índice y
+una partición para mejorar el rendimiento de consultas en la
+tabla RegistrosTiempo?
+
+Ventajas de índices: mejoran la velocidad de búsquedas.
+Desventajas: ocupan espacio y pueden ralentizar inserciones.
+
+Ventajas de particiones: mejoran la gestión de grandes volúmenes de datos.
+Desventajas: la dificultad en el mantenimiento.
+
+Índice y partición para RegistrosTiempo:
+- Índice: (AsignacionID, Fecha)
+- Partición por rango mensual (Fecha)
+
+
+
+
+
+
